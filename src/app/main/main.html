@@ -1,0 +1,71 @@
+<div class="container">
+	<div my-loading-spinner="viewLoading">
+	  <div>
+	    <acme-navbar></acme-navbar>
+	  </div>
+
+	  <div class="row">
+
+	    <div class="form-createEvent col-sm-12 col-md-8">
+
+				<form name="trainScheduleForm">
+
+					<div class="form-group required"
+		           ng-class="{ 'has-error': trainScheduleForm.from-station.$touched && trainScheduleForm.from-station.$invalid }">
+
+						<label for="from-station" class="control-label">Select your Origin:</label>
+						<select id="from-station" ng-model="main.fromStation"
+							ng-options="station for station in main.stationList | orderBy:orderBy"
+							ng-change="main.fromStationChanged()"
+							name="from-station" type="text" placeholder="Origin" required="true" autofocus>
+						</select>
+
+		        <span class="help-block" ng-show="trainScheduleForm.from-station.$error.required && trainScheduleForm.from-station.$touched">Origin is required.</span>
+
+		      </div>
+
+					<div class="form-group required"
+							 ng-class="{ 'has-error': trainScheduleForm.to-station.$touched && trainScheduleForm.to-station.$invalid }">
+
+						<label for="to-station" class="control-label">Select your Destination::</label>
+						<select id="to-station" ng-model="main.toStation"
+							ng-options="station for station in main.stationList | orderBy:orderBy"
+							ng-change="main.toStationChanged()"
+							name="to-station" type="text" placeholder="Destination" required="true" autofocus>
+						</select>
+
+						<span class="help-block" ng-show="trainScheduleForm.to-station.$error.required && trainScheduleForm.to-station.$touched">Origin is required.</span>
+
+					</div>
+
+				</form>
+			</div>
+
+		</div>
+
+		<div class="row">
+			<div class="col-sm-6 col-md-4">
+				<br />
+				<br />
+				<label>  Schedule information:</label>
+			</div>
+		</div>
+
+	  <div class="row">
+	    <div class="col-sm-6 col-md-6" ng-repeat="schedule in main.schedules">
+	      <div class="col-xs-12 col-sm-12 col-md-8 col-lg-6" tabindex="0">
+	          <div class="well">
+							<h4>Line: {{ schedule.trainLine }}</h4>
+							<p>Trip Duration: {{ schedule.duration }} mins</p>
+		          <p>From : {{ schedule.origin }}</p>
+							<p>Departure Time : {{ schedule.origTimeMin }}</p>
+							<p>To : {{ schedule.destination }}</p>
+							<p>Arrival Time: {{ schedule.destTimeMin }}</p>
+	        </div>
+	      </div>
+	    </div>
+	  </div>
+
+  </div>
+
+</div>
