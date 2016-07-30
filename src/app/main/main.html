@@ -1,5 +1,5 @@
 <div class="container">
-	<div my-loading-spinner="viewLoading">
+	<div my-loading-spinner="main.viewLoading">
 	  <div>
 	    <acme-navbar></acme-navbar>
 	  </div>
@@ -13,10 +13,10 @@
 					<div class="form-group required"
 		           ng-class="{ 'has-error': trainScheduleForm.from-station.$touched && trainScheduleForm.from-station.$invalid }">
 
-						<label for="from-station" class="control-label">Select your Origin:</label>
+						<label for="from-station" class="control-label">Origin:</label>
 						<select id="from-station" ng-model="main.fromStation"
 							ng-options="station for station in main.stationList | orderBy:orderBy"
-							ng-change="main.fromStationChanged()"
+							ng-change="main.StationChanged()"
 							name="from-station" type="text" placeholder="Origin" required="true" autofocus>
 						</select>
 
@@ -27,10 +27,10 @@
 					<div class="form-group required"
 							 ng-class="{ 'has-error': trainScheduleForm.to-station.$touched && trainScheduleForm.to-station.$invalid }">
 
-						<label for="to-station" class="control-label">Select your Destination::</label>
+						<label for="to-station" class="control-label">Destination::</label>
 						<select id="to-station" ng-model="main.toStation"
 							ng-options="station for station in main.stationList | orderBy:orderBy"
-							ng-change="main.toStationChanged()"
+							ng-change="main.StationChanged()"
 							name="to-station" type="text" placeholder="Destination" required="true" autofocus>
 						</select>
 
@@ -50,22 +50,23 @@
 				<label>  Schedule information:</label>
 			</div>
 		</div>
+		<div my-loading-spinner="main.waitScheduleLoading">
+		  <div class="row">
+		    <div class="col-sm-6 col-md-6" ng-repeat="schedule in main.schedules">
+		      <div class="col-xs-12 col-sm-12 col-md-8 col-lg-6" tabindex="0">
+		          <div class="well">
+								<h4>Line: {{ schedule.trainLine }}</h4>
+								<p>Trip Duration: {{ schedule.duration }} mins</p>
+			          <p>From : {{ schedule.origin }}</p>
+								<p>Departure Time : {{ schedule.origTimeMin }}</p>
+								<p>To : {{ schedule.destination }}</p>
+								<p>Arrival Time: {{ schedule.destTimeMin }}</p>
+		        </div>
+		      </div>
+		    </div>
+				<!-- <span class="help-block" ng-show="main.schedules.length < 1">Schedule Not Available.</span> -->
+		  </div>
 
-	  <div class="row">
-	    <div class="col-sm-6 col-md-6" ng-repeat="schedule in main.schedules">
-	      <div class="col-xs-12 col-sm-12 col-md-8 col-lg-6" tabindex="0">
-	          <div class="well">
-							<h4>Line: {{ schedule.trainLine }}</h4>
-							<p>Trip Duration: {{ schedule.duration }} mins</p>
-		          <p>From : {{ schedule.origin }}</p>
-							<p>Departure Time : {{ schedule.origTimeMin }}</p>
-							<p>To : {{ schedule.destination }}</p>
-							<p>Arrival Time: {{ schedule.destTimeMin }}</p>
-	        </div>
-	      </div>
-	    </div>
-	  </div>
-
-  </div>
-
+  	</div>
+	</div>
 </div>

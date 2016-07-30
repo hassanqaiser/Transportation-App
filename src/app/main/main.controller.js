@@ -6,23 +6,25 @@
     .controller('MainController', MainController);
 
   /** @ngInject */
-  function MainController(idbService, $q) {
+  function MainController(idbService, $q, $timeout) {
     var vm = this;
     vm.viewLoading = true;
+    vm.schedules = [];
+    $("#from-station").focus();
 
     var stationRequest = new Request('http://api.bart.gov/api/stn.aspx?cmd=stns&key=MW9S-E7SL-26DU-VV8V');
     var scheduleDepartTemplate = 'http://api.bart.gov/api/sched.aspx?cmd=depart&orig=%orig%&dest=%dest%&key=MW9S-E7SL-26DU-VV8V&b=2&a=2&l=1';
     var scheduleAvailable = true;
 
     showOfflineStations().then(function(){
-    	populateAndShowStations();
+    	cacheAndShowStationsList();
     }).catch(function(error){
-    	populateAndShowStations();
+    	cacheAndShowStationsList();
     });
 
-    function populateAndShowStations(){
+    function cacheAndShowStationsList(){
       vm.stationList = [];
-      vm.viewLoading = true;
+
     	return getJSON(stationRequest).then(function(responseJSON){
     		responseJSON.root.stations.station.forEach(function(station){
           vm.stationList.push(station.name['#text'] + ' - ' + station.abbr['#text']);
@@ -30,97 +32,81 @@
 
         vm.fromStation = vm.stationList[0];
         vm.toStation = vm.stationList[1];
-        idbService.storeDefaultValues(vm.fromStation, vm.toStation);
+        var storeDefaultValues = idbService.storeDefaultValues(vm.fromStation, vm.toStation);
 
-        idbService.storeStationsToIDB(responseJSON.root.stations.station);
-        vm.viewLoading = false;
-    	});
+        var storeStationsToIDB = idbService.storeStationsToIDB(responseJSON.root.stations.station);
+
+        $q.all([storeDefaultValues, storeStationsToIDB]).then(function(data) {
+          vm.viewLoading = false;
+    	  });
+
+      });
     }
 
     function showOfflineStations(){
       var deferred = $q.defer();
-      vm.viewLoading = true;
       vm.stationList = [];
       var stationsFromIDB = idbService.getStationsFromIDB();
       var defaultStationFrom = idbService.getDefaultStationFrom();
       var defaultStationTo = idbService.getDefaultStationTo();
 
-      stationsFromIDB.then(function(stations){
-        stations.forEach(function(station){
+      $q.all([stationsFromIDB, defaultStationFrom, defaultStationTo]).then(function(data) {
+        data[0].forEach(function(station){
           vm.stationList.push(station.name['#text'] + ' - ' + station.abbr['#text']);
         });
-      }).catch(function(error){
-      	deferred.reject();
-        vm.viewLoading = false;
-      });
 
-      defaultStationFrom.then(function(from){
-        vm.fromStation = from;
-      }).catch(function(error){
-      	deferred.reject();
-        vm.viewLoading = false;
-      });
-
-      defaultStationTo.then(function(to){
-        vm.toStation = to;
-      }).catch(function(error){
-      	deferred.reject();
-        vm.viewLoading = false;
-      });
-
-      if(vm.stationList && vm.fromStation && vm.toStation) {
+        vm.fromStation = data[1];
+        vm.toStation = data[2];
         deferred.resolve();
-        vm.viewLoading = false;
-      }
-      return deferred.promise;
-    }
-
-    function showPopulateSchedule(origin, destination){
-    	if(!origin || !destination) return;
-    	showOfflineSchedule(origin, destination).then(function(){
-    		populateSchedule(origin, destination);
-    	}).catch(function(error){
-      	populateSchedule(origin, destination);
       });
+
+      return deferred.promise;
     }
 
     function showOfflineSchedule(origin, destination){
       var deferred = $q.defer();
-      vm.viewLoading = true;
       var offlineSchedule = idbService.getDefaultSchedule(origin, destination);
       offlineSchedule.then(function(trips){
-        if(trips)
-          showSchedule(trips);
-        else
-          showNoSchedule();
+        if(trips){
+          vm.schedules = getSchedules(trips);
+        } else {
+          if(scheduleAvailable) scheduleAvailable = false;
+          vm.schedules = [];
+        }
         deferred.resolve();
-        vm.viewLoading = false;
       }).catch(function(error){
+        if(scheduleAvailable) scheduleAvailable = false;
+        vm.schedules = [];
         deferred.reject();
-        vm.viewLoading = false;
       });
 
       return deferred.promise;
     }
 
-    function populateSchedule(origin, destination){
+    function cacheAndShowSchedule(origin, destination){
     	if(!origin || !destination) return;
-      vm.viewLoading = true;
-    	var scheduleRequest = new Request(scheduleDepartTemplate.replace('%orig%', (origin.split('-')[1]).trim()).replace('%dest%', (destination.split('-')[1]).trim()));
+      vm.waitScheduleLoading = true;
+      var requestTemplate = scheduleDepartTemplate.replace('%orig%', (origin.split('-')[1]).trim()).replace('%dest%', (destination.split('-')[1]).trim());
+      var scheduleRequest = new Request(requestTemplate);
     	getJSON(scheduleRequest).then(function(responseJSON){
     		if(!responseJSON.root.schedule.request) return;
     		var scheduleObject = getScheduleObject(responseJSON.root.schedule.request.trip);
-    		showSchedule(scheduleObject);
-        idbService.storeScheduleToIDB(scheduleObject, origin, destination);
-        vm.viewLoading = false;
+        var storeScheduleToIDB = idbService.storeScheduleToIDB(scheduleObject, origin, destination);
+        storeScheduleToIDB.then(function(){
+          vm.waitScheduleLoading = false;
+          $timeout(function() {
+              vm.schedules = getSchedules(scheduleObject);
+          }, 500);
+        });
+
     	}).catch(function(error){
-    		if(!error) return;
-        vm.viewLoading = false;
+    		vm.schedules = [];
+        vm.waitScheduleLoading = false;
     	});
     }
 
-    function showSchedule(trips){
-      vm.schedules = [];
+    function getSchedules(trips){
+      var schedules = [];
       scheduleAvailable = true;
 
     	trips.forEach(function(trip){
@@ -128,22 +114,16 @@
         var line = '';
     		if(trip.leg.forEach){
     			trip.leg.forEach(function(leg){
-            vm.schedules.push(leg);
+            schedules.push(leg);
     			});
 
     		}
     		else {
-    			vm.schedules.push(trip.leg);
+    			schedules.push(trip.leg);
     		}
     	});
-    }
 
-    function showNoSchedule(){
-    	if(scheduleAvailable){
-        vm.schedules = [];
-    		scheduleAvailable = false;
-
-    	}
+      return schedules;
     }
 
     function getScheduleObject(trips){
@@ -204,32 +184,19 @@
     	return duration;
     }
 
-    vm.fromStationChanged =  function(event){
+    vm.StationChanged =  function(event){
 
       var fromStation = vm.fromStation;
     	var toStation = vm.toStation;
 
     	if(!fromStation || !toStation) return;
 
-      showPopulateSchedule(fromStation, toStation);
-      idbService.storeDefaultValues(fromStation, toStation);
+      showOfflineSchedule(fromStation, toStation).then(function(){
+        cacheAndShowSchedule(fromStation, toStation);
+      }).catch(function(error){
+        cacheAndShowSchedule(fromStation, toStation);
+      });
 
-    };
-
-    vm.toStationChanged =  function(event){
-
-        var fromStation = vm.fromStation;
-      	var toStation = vm.toStation;
-
-      	if(!fromStation || !toStation) return;
-
-        showPopulateSchedule(fromStation, toStation);
-        idbService.storeDefaultValues(fromStation, toStation);
-
-    };
-
-    vm.tripDetails =  function(){
-      alert("Coming Soon...");
     };
 
     String.prototype.replaceAll = function(search, replacement) {
