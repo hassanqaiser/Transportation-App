@@ -112,14 +112,18 @@
     	trips.forEach(function(trip){
     		var scheduleLine = '';
         var line = '';
+        var duration = trip.duration;
     		if(trip.leg.forEach){
     			trip.leg.forEach(function(leg){
+            leg.duration = duration;
             schedules.push(leg);
     			});
 
     		}
     		else {
-    			schedules.push(trip.leg);
+          var schdObj = trip.leg;
+          schdObj.duration = duration;
+    			schedules.push(schdObj);
     		}
     	});
 
