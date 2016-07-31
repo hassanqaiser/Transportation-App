@@ -38,7 +38,9 @@
 
         $q.all([storeDefaultValues, storeStationsToIDB]).then(function(data) {
           vm.viewLoading = false;
-    	  });
+    	  }, function (error) {
+          return;
+        });
 
       });
     }
@@ -58,6 +60,8 @@
         vm.fromStation = data[1];
         vm.toStation = data[2];
         deferred.resolve();
+      }, function (error) {
+        deferred.reject();
       });
 
       return deferred.promise;
@@ -97,6 +101,8 @@
           $timeout(function() {
               vm.schedules = getSchedules(scheduleObject);
           }, 500);
+        }, function (error) {
+          return;
         });
 
     	}).catch(function(error){
