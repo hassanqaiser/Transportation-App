@@ -8,8 +8,6 @@
   /** @ngInject */
   function MainController(idbService, $q, $timeout) {
     var vm = this;
-    vm.viewLoading = true;
-    vm.schedules = [];
     $("#from-station").focus();
 
     var stationRequest = new Request('http://api.bart.gov/api/stn.aspx?cmd=stns&key=MW9S-E7SL-26DU-VV8V');
@@ -23,9 +21,9 @@
     });
 
     function cacheAndShowStationsList(){
-      vm.stationList = [];
-
+      vm.viewLoading = true;
     	return getJSON(stationRequest).then(function(responseJSON){
+        vm.stationList = [];
     		responseJSON.root.stations.station.forEach(function(station){
           vm.stationList.push(station.name['#text'] + ' - ' + station.abbr['#text']);
       	});
@@ -39,9 +37,11 @@
         $q.all([storeDefaultValues, storeStationsToIDB]).then(function(data) {
           vm.viewLoading = false;
     	  }, function (error) {
-          return;
+          vm.viewLoading = false;
         });
 
+      }, function (error) {
+        vm.viewLoading = false;
       });
     }
 
@@ -72,7 +72,9 @@
       var offlineSchedule = idbService.getDefaultSchedule(origin, destination);
       offlineSchedule.then(function(trips){
         if(trips){
-          vm.schedules = getSchedules(trips);
+          $timeout(function() {
+              vm.schedules = getSchedules(trips);
+          }, 500);
         } else {
           if(scheduleAvailable) scheduleAvailable = false;
           vm.schedules = [];
@@ -102,11 +104,10 @@
               vm.schedules = getSchedules(scheduleObject);
           }, 500);
         }, function (error) {
-          return;
+          vm.waitScheduleLoading = false;
         });
 
     	}).catch(function(error){
-    		vm.schedules = [];
         vm.waitScheduleLoading = false;
     	});
     }
@@ -219,52 +220,65 @@
     		return	 response.text().then(function(responseText){
     			var parser = new DOMParser();
     			return parser.parseFromString(responseText, 'text/xml');
-    		});
-    	});
+    		}, function (error) {
+          throw "XML is undefined";
+        });
+    	}, function (error) {
+        throw "XML is undefined";
+      });
     }
 
     function getJSON(request){
     	return getXML(request).then(function(responseXML){
-    		return xmlToJson(responseXML);
-    	});
+        if(responseXML)
+    		  return xmlToJson(responseXML);
+        else
+          throw "XML is undefined";
+    	}, function (error) {
+        throw "XML is undefined";
+      });
     }
 
     function xmlToJson(xml) {
+      if(xml){
+        // Create the return object
+      	var obj = {};
 
-    	// Create the return object
-    	var obj = {};
+      	if (xml.nodeType == 1) { // element
+      		// do attributes
+      		if (xml.attributes.length > 0) {
+      			obj['@attributes'] = {};
+      			for (var j = 0; j < xml.attributes.length; j++) {
+      				var attribute = xml.attributes.item(j);
+      				obj['@attributes'][attribute.nodeName] = attribute.nodeValue;
+      			}
+      		}
+      	} else if (xml.nodeType == 3) { // text
+      		obj = xml.nodeValue;
+      	}
 
-    	if (xml.nodeType == 1) { // element
-    		// do attributes
-    		if (xml.attributes.length > 0) {
-    			obj['@attributes'] = {};
-    			for (var j = 0; j < xml.attributes.length; j++) {
-    				var attribute = xml.attributes.item(j);
-    				obj['@attributes'][attribute.nodeName] = attribute.nodeValue;
-    			}
-    		}
-    	} else if (xml.nodeType == 3) { // text
-    		obj = xml.nodeValue;
-    	}
+      	// do children
+      	if (xml.hasChildNodes()) {
+      		for(var i = 0; i < xml.childNodes.length; i++) {
+      			var item = xml.childNodes.item(i);
+      			var nodeName = item.nodeName;
+      			if (typeof(obj[nodeName]) == 'undefined') {
+      				obj[nodeName] = xmlToJson(item);
+      			} else {
+      				if (typeof(obj[nodeName].push) == 'undefined') {
+      					var old = obj[nodeName];
+      					obj[nodeName] = [];
+      					obj[nodeName].push(old);
+      				}
+      				obj[nodeName].push(xmlToJson(item));
+      			}
+      		}
+      	}
+      	return obj;
+      } else {
+        throw "XML is undefined";
+      }
 
-    	// do children
-    	if (xml.hasChildNodes()) {
-    		for(var i = 0; i < xml.childNodes.length; i++) {
-    			var item = xml.childNodes.item(i);
-    			var nodeName = item.nodeName;
-    			if (typeof(obj[nodeName]) == 'undefined') {
-    				obj[nodeName] = xmlToJson(item);
-    			} else {
-    				if (typeof(obj[nodeName].push) == 'undefined') {
-    					var old = obj[nodeName];
-    					obj[nodeName] = [];
-    					obj[nodeName].push(old);
-    				}
-    				obj[nodeName].push(xmlToJson(item));
-    			}
-    		}
-    	}
-    	return obj;
     }
   }
 })();
