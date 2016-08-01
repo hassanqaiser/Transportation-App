@@ -21,7 +21,7 @@
     });
 
     function cacheAndShowStationsList(){
-      vm.viewLoading = true;
+      //vm.viewLoading = true;
     	return getJSON(stationRequest).then(function(responseJSON){
         vm.stationList = [];
     		responseJSON.root.stations.station.forEach(function(station){
@@ -29,7 +29,7 @@
       	});
 
         vm.fromStation = vm.stationList[0];
-        vm.toStation = vm.stationList[1];
+        //vm.toStation = vm.stationList[1];
         var storeDefaultValues = idbService.storeDefaultValues(vm.fromStation, vm.toStation);
 
         var storeStationsToIDB = idbService.storeStationsToIDB(responseJSON.root.stations.station);
@@ -58,7 +58,7 @@
         });
 
         vm.fromStation = data[1];
-        vm.toStation = data[2];
+        //vm.toStation = data[2];
         deferred.resolve();
       }, function (error) {
         deferred.reject();

@@ -9,13 +9,11 @@ self.addEventListener('install', function(event) {
       return cache.addAll([
         '/',
         'index.html',
-        'app/index.css',
-        'app/main/main.html',
-        'app/main/main.css',
-        'app/components/navbar/navbar.html',
-        'app/components/navbar/navbar.css',
-        'app/components/loadingSpinner/spin.html',
-        'favicon.ico'
+        'favicon.ico',
+        'scripts/app-6c4a1d2cf9.js',
+        'scripts/vendor-6435bbb57c.js',
+        'styles/app-bc891c8092.css',
+        'styles/vendor-a2eee1e9a0.css'
       ]);
     })
   );
