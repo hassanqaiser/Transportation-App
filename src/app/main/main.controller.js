@@ -15,13 +15,18 @@
     var scheduleAvailable = true;
 
     showOfflineStations().then(function(){
-    	cacheAndShowStationsList();
+    	cacheAndShowStationsList().then(function(){
+        vm.StationChanged();
+      });
     }).catch(function(error){
-    	cacheAndShowStationsList();
+      cacheAndShowStationsList().then(function(){
+        vm.StationChanged();
+      });
     });
 
     function cacheAndShowStationsList(){
       //vm.viewLoading = true;
+      var deferred = $q.defer();
     	return getJSON(stationRequest).then(function(responseJSON){
         vm.stationList = [];
     		responseJSON.root.stations.station.forEach(function(station){
@@ -29,19 +34,21 @@
       	});
 
         vm.fromStation = vm.stationList[0];
-        //vm.toStation = vm.stationList[1];
-        var storeDefaultValues = idbService.storeDefaultValues(vm.fromStation, vm.toStation);
+        vm.toStation = vm.stationList[1];
 
+        var storeDefaultValues = idbService.storeDefaultValues(vm.fromStation, vm.toStation);
         var storeStationsToIDB = idbService.storeStationsToIDB(responseJSON.root.stations.station);
 
         $q.all([storeDefaultValues, storeStationsToIDB]).then(function(data) {
           vm.viewLoading = false;
+          deferred.resolve();
     	  }, function (error) {
           vm.viewLoading = false;
         });
 
       }, function (error) {
         vm.viewLoading = false;
+        deferred.reject();
       });
     }
 
@@ -58,7 +65,7 @@
         });
 
         vm.fromStation = data[1];
-        //vm.toStation = data[2];
+        vm.toStation = data[2];
         deferred.resolve();
       }, function (error) {
         deferred.reject();

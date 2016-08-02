@@ -10,7 +10,7 @@ self.addEventListener('install', function(event) {
         '/',
         'index.html',
         'favicon.ico',
-        'scripts/app-6c4a1d2cf9.js',
+        'scripts/app-4c071228aa.js',
         'scripts/vendor-6435bbb57c.js',
         'styles/app-bc891c8092.css',
         'styles/vendor-a2eee1e9a0.css'
